@@ -20,6 +20,7 @@
         <a href="#sdx">SDX</a>
         <a href="#altirra">Altirra</a>
         <a href="#start">Start</a>
+        <a href="#manual">Manual</a>
         <a href="#pliki">Pliki</a>
       </nav>
     </header>
@@ -114,13 +115,12 @@
             <li>obsługa <code>SDC1:</code> - <code>SDC4:</code> dla ID 0-3,</li>
             <li>ścieżki, katalogi i wildcardy w poleceniach SDX,</li>
             <li>do 4 równocześnie otwartych plików lub katalogów,</li>
-            <li>opcjonalny tryb szybkiego SIO przez przełącznik <code>/H</code>,</li>
             <li>mały rdzeń w pamięci głównej i logika w pamięci rozszerzonej programu.</li>
           </ul>
         </div>
         <aside class="command-panel" aria-label="Przykładowe polecenia SDX">
           <span class="panel-title">SDX</span>
-          <pre><code>SDCDEV /F /M3 /H
+          <pre><code>SDCDEV /F /M3
 SDC1:
 DIR
 CD GRY&gt;RPG
@@ -189,6 +189,79 @@ Custom &gt; sio2sd.atdevice</code></pre>
               Użyj <code>SDMOUNT</code> z poziomu SDX albo tabeli napędów w GUI.
               Montuj obrazy pod numerem napędu, który nie koliduje z dyskiem
               używanym już przez Altirrę.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="manual" class="section manual">
+        <div class="section-title">
+          <p class="eyebrow">Skrócony manual</p>
+          <h2>Najczęstsze komendy i ustawienia</h2>
+        </div>
+        <div class="manual-grid">
+          <article>
+            <h3>SDCDEV.SYS w SpartaDOS X</h3>
+            <p>
+              Sterownik najlepiej ładować wcześnie, np. z <code>AUTOEXEC.BAT</code>.
+              Najprostsza konfiguracja to automatyczne znalezienie pierwszego
+              odpowiadającego SIO2SD i przypisanie go do <code>SDC1:</code>.
+            </p>
+            <pre><code>SDCDEV /F
+SDC1:
+DIR
+CD &gt;
+CD GRY&gt;RPG
+COPY SDC1:PROGRAM.XEX D1:
+COPY D1:*.DAT SDC1:
+MKDIR NOWY
+DEL *.TMP</code></pre>
+            <p>
+              Opcje <code>/0</code> - <code>/3</code> wybierają konkretny ID
+              urządzenia, a <code>/M1</code> - <code>/M4</code> ustawiają liczbę
+              jednocześnie otwartych plików/katalogów. Rozsądny domyślny wybór
+              do pracy z kopiowaniem to <code>/M2</code> lub <code>/M3</code>.
+            </p>
+          </article>
+          <article>
+            <h3>SDMOUNT.COM</h3>
+            <p>
+              <code>SDMOUNT</code> montuje pliki z karty jako napędy Atari.
+              Nazwy podawaj tak, jak pokazuje je <code>DIR</code> na
+              <code>SDC:</code>; ścieżki mogą używać separatora <code>&gt;</code>,
+              <code>/</code> albo <code>\</code>.
+            </p>
+            <pre><code>SDMOUNT
+SDMOUNT D2: GRA.ATR
+SDMOUNT D2: &gt;GRY&gt;DEMO.ATR
+SDMOUNT D3: /E
+SDMOUNT D2: /D
+SDMOUNT /1 D2: GRA.ATR</code></pre>
+            <p>
+              Dla bezpieczeństwa montuj obraz pod innym numerem niż napęd, z
+              którego aktualnie startuje lub pracuje SDX. W Altirrze unikniesz
+              wtedy sytuacji, w której dwa urządzenia odpowiadają jako ten sam
+              napęd.
+            </p>
+          </article>
+          <article>
+            <h3>Urządzenie SIO2SD w Altirrze</h3>
+            <p>
+              Uruchom <code>sio2sd_gui.bat</code> albo serwer konsolowy, wskaż
+              katalog karty i dodaj <code>altirra/sio2sd.atdevice</code> jako
+              urządzenie Custom w konfiguracji Altirry.
+            </p>
+            <pre><code>sio2sd_gui.bat
+
+Altirra:
+System &gt; Configure System
+Peripherals &gt; Devices &gt; Add
+Custom &gt; sio2sd.atdevice</code></pre>
+            <p>
+              Korzeniem karty widzianej przez Atari jest podkatalog
+              <code>Atari</code>. GUI pozwala montować obrazy w slotach
+              <code>D1:</code> - <code>D15:</code>, zarządzać mapowaniem
+              wirtualnych slotów i obserwować log pracy urządzenia.
             </p>
           </article>
         </div>

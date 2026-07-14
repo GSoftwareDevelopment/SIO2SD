@@ -9,6 +9,10 @@ __pycache__/
 # Build work directories
 build/
 
+# Reference bundles kept locally, not published in this repository
+Configurator_35/
+DasSD/
+
 # Local settings
 sio2sd_gui_settings.json
 dist/sio2sd_gui_settings.json
@@ -24,4 +28,3 @@ dist/*
 # Local archives and accidental staging folders
 *.7z
 docs/
-

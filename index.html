@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SIO2SD dla SpartaDOS X i Altirry</title>
+    <meta
+      name="description"
+      content="Sterownik SDCDEV.SYS dla SpartaDOS X oraz emulowane urządzenie SIO2SD dla Altirry z serwerem i panelem GUI."
+    >
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="SIO2SD SDX Altirra">
+        <img src="assets/sio2sd_gui_icon.png" alt="" width="40" height="40">
+        <span>SIO2SD / SDX / Altirra</span>
+      </a>
+      <nav aria-label="Główna nawigacja">
+        <a href="#sdx">SDX</a>
+        <a href="#altirra">Altirra</a>
+        <a href="#start">Start</a>
+        <a href="#pliki">Pliki</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero section-band">
+        <div class="hero-copy">
+          <p class="eyebrow">Atari 8-bit · SpartaDOS X · SIO2SD</p>
+          <h1>Sterownik karty SD dla SDX i nowe SIO2SD dla Altirry</h1>
+          <p class="lead">
+            Projekt łączy dwa światy: natywny dostęp SpartaDOS X do plików na
+            karcie SIO2SD oraz emulowane urządzenie SIO2SD dla Altirry, które
+            wystawia katalog komputera jako kartę SD Atari.
+          </p>
+          <div class="actions" aria-label="Szybkie akcje">
+            <a class="button primary" href="#start">Jak uruchomić</a>
+            <a class="button secondary" href="#pliki">Co jest w paczce</a>
+          </div>
+        </div>
+        <div class="device-visual" aria-label="Podgląd projektu SIO2SD">
+          <div class="lcd">
+            <span>SDC1: READY</span>
+            <span>ALTIRRA LINK</span>
+          </div>
+          <img src="assets/sio2sd_gui_icon.png" alt="Ikona panelu SIO2SD GUI">
+          <div class="led-row" aria-hidden="true">
+            <span class="led active"></span>
+            <span class="led"></span>
+            <span class="led error"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">
+          <p class="eyebrow">Co powstało</p>
+          <h2>Jedna karta SD, dwa wygodne tryby pracy</h2>
+        </div>
+        <div class="feature-grid">
+          <article class="feature-card">
+            <span class="tag">SDX</span>
+            <h3>SDCDEV.SYS</h3>
+            <p>
+              Natywne urządzenie plikowe SpartaDOS X. Po instalacji udostępnia
+              jednostki <code>SDC1:</code> - <code>SDC4:</code> i pozwala używać
+              karty SIO2SD podobnie jak dysku: <code>DIR</code>, <code>CD</code>,
+              <code>COPY</code>, <code>REN</code>, <code>DEL</code>,
+              katalogi, ścieżki i maski plików.
+            </p>
+          </article>
+          <article class="feature-card">
+            <span class="tag">SDX</span>
+            <h3>SDMOUNT.COM</h3>
+            <p>
+              Narzędzie do montowania obrazów z karty pod napędy
+              <code>D1:</code> - <code>D15:</code>. Obsługuje obrazy
+              <code>.ATR</code>, programy <code>.XEX</code>/<code>.COM</code>
+              oraz puste dyski tworzone z poziomu SDX.
+            </p>
+          </article>
+          <article class="feature-card">
+            <span class="tag alt">Altirra</span>
+            <h3>SIO2SD jako urządzenie emulatora</h3>
+            <p>
+              Plik <code>sio2sd.atdevice</code> i serwer Python emulują API
+              firmware SIO2SD 3.x. Altirra widzi urządzenie SIO2SD, a katalog
+              hosta staje się kartą SD z podkatalogiem <code>Atari</code>.
+            </p>
+          </article>
+          <article class="feature-card">
+            <span class="tag gui">GUI</span>
+            <h3>Panel SIO2SD-GUI</h3>
+            <p>
+              Graficzny panel pozwala wybrać katalog karty, uruchomić serwer,
+              montować i odmontowywać napędy, obsługiwać sloty wirtualne,
+              podglądać log oraz używać mini panelu LCD.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="sdx" class="section split">
+        <div>
+          <p class="eyebrow">Sterownik dla SpartaDOS X</p>
+          <h2>SDC: jako natywne urządzenie plikowe</h2>
+          <p>
+            <code>SDCDEV.SYS</code> używa natywnego API SIO2SD na szynie SIO.
+            Najważniejszy cel jest prosty: pliki na karcie SD mają być dostępne
+            bez ręcznego przepinania obrazów ATR, bezpośrednio z poleceń SDX.
+          </p>
+          <ul class="check-list">
+            <li>obsługa <code>SDC1:</code> - <code>SDC4:</code> dla ID 0-3,</li>
+            <li>ścieżki, katalogi i wildcardy w poleceniach SDX,</li>
+            <li>do 4 równocześnie otwartych plików lub katalogów,</li>
+            <li>opcjonalny tryb szybkiego SIO przez przełącznik <code>/H</code>,</li>
+            <li>mały rdzeń w pamięci głównej i logika w pamięci rozszerzonej programu.</li>
+          </ul>
+        </div>
+        <aside class="command-panel" aria-label="Przykładowe polecenia SDX">
+          <span class="panel-title">SDX</span>
+          <pre><code>SDCDEV /F /M3 /H
+SDC1:
+DIR
+CD GRY&gt;RPG
+COPY SDC1:GAME.XEX D1:
+SDMOUNT D2: &gt;GRY&gt;DEMO.ATR</code></pre>
+        </aside>
+      </section>
+
+      <section id="altirra" class="section split reverse">
+        <aside class="command-panel accent" aria-label="Przykładowy start serwera Altirry">
+          <span class="panel-title">Altirra</span>
+          <pre><code>sio2sd_server.bat
+
+System &gt; Configure System
+Peripherals &gt; Devices &gt; Add
+Custom &gt; sio2sd.atdevice</code></pre>
+        </aside>
+        <div>
+          <p class="eyebrow">Nowe urządzenie dla Altirry</p>
+          <h2>SIO2SD bez fizycznego sprzętu</h2>
+          <p>
+            Altirra nie ma wbudowanej pełnej emulacji protokołu sterującego
+            SIO2SD, dlatego projekt dodaje własne urządzenie Custom Device
+            oraz serwer. Emulator łączy się z serwerem, a ten udostępnia
+            katalog dysku jako kartę SD widzianą przez Atari.
+          </p>
+          <ul class="check-list">
+            <li>obsługa komend firmware SIO2SD 3.x, w tym operacji plikowych,</li>
+            <li>mapowanie obrazów jako <code>D1:</code> - <code>D15:</code>,</li>
+            <li>sloty wirtualne <code>V1:</code> - <code>V99</code> z mapowaniem do napędów,</li>
+            <li>emulacja pliku <code>SIO2SD.CFG</code> i trybu selector,</li>
+            <li>wsparcie dla ATR oraz bootowania XEX przez dołączony bootloader.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="start" class="section section-band">
+        <div class="section-title">
+          <p class="eyebrow">Szybki start</p>
+          <h2>Minimalna ścieżka uruchomienia</h2>
+        </div>
+        <div class="steps">
+          <article>
+            <span>1</span>
+            <h3>Na prawdziwym Atari</h3>
+            <p>
+              Skopiuj <code>SDCDEV.SYS</code> na dysk startowy SDX i dodaj
+              <code>SDCDEV /F</code> na początku <code>AUTOEXEC.BAT</code>.
+              Po starcie przejdź na <code>SDC1:</code> i używaj zwykłych
+              poleceń SpartaDOS X.
+            </p>
+          </article>
+          <article>
+            <span>2</span>
+            <h3>W Altirrze</h3>
+            <p>
+              Uruchom <code>sio2sd_gui.bat</code> albo <code>sio2sd_server.bat</code>,
+              wskaż katalog karty, a w konfiguracji Altirry dodaj urządzenie
+              Custom z pliku <code>altirra/sio2sd.atdevice</code>.
+            </p>
+          </article>
+          <article>
+            <span>3</span>
+            <h3>Do montowania obrazów</h3>
+            <p>
+              Użyj <code>SDMOUNT</code> z poziomu SDX albo tabeli napędów w GUI.
+              Montuj obrazy pod numerem napędu, który nie koliduje z dyskiem
+              używanym już przez Altirrę.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="pliki" class="section">
+        <div class="section-title">
+          <p class="eyebrow">Zawartość repozytorium</p>
+          <h2>Najważniejsze pliki</h2>
+        </div>
+        <div class="file-table" role="table" aria-label="Najważniejsze pliki projektu">
+          <div role="row">
+            <strong role="cell"><a href="SDCDEV.SYS">SDCDEV.SYS</a></strong>
+            <span role="cell">sterownik jądra SDX, zalecana droga dostępu do karty</span>
+          </div>
+          <div role="row">
+            <strong role="cell"><a href="SDMOUNT.COM">SDMOUNT.COM</a></strong>
+            <span role="cell">montowanie obrazów z karty jako napędy D1:-D15:</span>
+          </div>
+          <div role="row">
+            <strong role="cell"><a href="SIO2SD.SYS">SIO2SD.SYS</a></strong>
+            <span role="cell">prostszy handler CIO jako alternatywa dla SDCDEV</span>
+          </div>
+          <div role="row">
+            <strong role="cell"><a href="altirra/sio2sd.atdevice">sio2sd.atdevice</a></strong>
+            <span role="cell">definicja urządzenia Custom Device dla Altirry</span>
+          </div>
+          <div role="row">
+            <strong role="cell"><a href="altirra/sio2sd_server.py">sio2sd_server.py</a></strong>
+            <span role="cell">serwer wystawiający katalog hosta jako kartę SIO2SD</span>
+          </div>
+          <div role="row">
+            <strong role="cell"><a href="dist/SIO2SD-GUI.exe">SIO2SD-GUI.exe</a></strong>
+            <span role="cell">gotowy panel dla Windows z obsługą serwera i napędów</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section note">
+        <div>
+          <p class="eyebrow">Status</p>
+          <h2>Zweryfikowane symulacyjnie, do testów na sprzęcie</h2>
+          <p>
+            Sterowniki i logika serwera są sprawdzone testami symulacyjnymi:
+            protokół SIO2SD, operacje plikowe SDX, katalogi, kopiowanie,
+            montowanie obrazów i wybrane scenariusze Altirry. Binarki warto
+            jeszcze potwierdzić na rzeczywistym Atari oraz fizycznym SIO2SD.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <span>SIO2SD dla SDX i Altirry</span>
+      <a href="README.md">Pełna dokumentacja</a>
+    </footer>
+  </body>
+</html>

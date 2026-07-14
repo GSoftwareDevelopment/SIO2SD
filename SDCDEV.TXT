@@ -1,0 +1,164 @@
+========================================
+ SDCDEV.SYS - dysk SDC: dla karty SIO2SD
+========================================
+
+CO TO JEST
+----------
+SDCDEV.SYS to sterownik SpartaDOS X. Daje
+dostep do plikow na karcie SD urzadzenia
+SIO2SD tak, jakby byly zwyklym dyskiem.
+Po instalacji masz jednostki:
+
+  SDC1:  SDC2:  SDC3:  SDC4:
+
+odpowiadajace SIO2SD o ID 0, 1, 2, 3.
+Dziala tu wszystko co na dysku: DIR, CD,
+COPY, MKDIR, RMDIR, REN, DEL, sciezki,
+maski (* i ?), uruchamianie programow.
+
+
+WYMAGANIA
+---------
+* SpartaDOS X 4.40 lub nowszy
+* SIO2SD z firmware 3.x
+* dla oszczednosci pamieci (patrz nizej):
+  SDX 4.47+ z pamiecia rozszerzona
+
+
+INSTALACJA
+----------
+Z linii polecen lub w AUTOEXEC.BAT:
+
+  SDCDEV [/0../3 | /F] [/M<n>] [/H]
+
+Ladujcie sterownik WCZESNIE (na poczatku
+AUTOEXEC.BAT). Zostaje w pamieci na stale.
+
+Opcje:
+
+  (bez opcji)
+      SDC1:-SDC4: = SIO2SD o ID 0-3.
+      Skan wypisuje wykryte urzadzenia.
+
+  /0 /1 /2 /3
+      Uzyj tylko wskazanego ID i przypisz
+      je do SDC1: (SDC2:-SDC4: wylaczone).
+      Instaluje sie tez, gdy urzadzenie
+      chwilowo nie odpowiada.
+
+  /F
+      Znajdz PIERWSZE odpowiadajace ID
+      (0-3) i przypisz je do SDC1:.
+      Gdy zadne nie odpowiada - nie
+      instaluje sie wcale.
+
+  /M<n>   (n = 1..4, domyslnie 2)
+      Ile plikow moze byc otwartych naraz.
+      Domyslne 2 to minimum dla COPY w
+      obrebie jednej karty (1 uchwyt na
+      katalog, 2. na plik zrodlowy).
+      /M1 oszczedza slot, ale wtedy taki
+      COPY sie nie uda.
+
+  /H
+      Sprobuj szybkiej transmisji SIO.
+      Sterownik sonduje SIO2SD komenda z
+      bitem $80 i jesli tryb zadziala,
+      dodaje $80 do kolejnych komend.
+      Jesli turbo nie zadziala, sam wraca
+      do standardowej predkosci i mowi o
+      tym. Domyslnie wylaczone.
+
+Opcje mozna laczyc, np.:
+
+  SDCDEV /F /M3
+
+
+UZYCIE
+------
+  SDC1:                wejdz na karte
+  DIR                  spis katalogu
+  CD GRY               wejdz do katalogu
+  CD GRY>RPG           wejdz glebiej
+  CD ..                katalog wyzej
+  CD >                 do korzenia karty
+
+  COPY SDC1:GRA.XEX D1:
+  COPY D1:*.DAT SDC1:
+  COPY SDC1:A.TXT SDC1:B.TXT
+
+  MKDIR NOWY           utworz katalog
+  RMDIR NOWY           usun (pusty) katalog
+  REN STARA.TXT NOWA.TXT
+  DEL *.TMP
+  X SDC1:PROGRAM.XEX   uruchom program
+
+Uwaga: SDX pokazuje 3-literowe jednostki
+jako litery, wiec:
+
+  SDCA: = SDC1:   (ID 0)
+  SDCB: = SDC2:   (ID 1)
+  SDCC: = SDC3:   (ID 2)
+  SDCD: = SDC4:   (ID 3)
+
+Obie formy dzialaja w polecen.
+
+
+NAZWY PLIKOW
+------------
+Karta moze miec dlugie nazwy (do 39 zn.),
+a SDX operuje nazwami 8.3. Nazwy, ktore
+sie nie mieszcza, sa pokazywane jako:
+
+  NNNN_III.EXT
+
+gdzie III to numer pozycji w katalogu.
+Przyklad:
+
+  "A Dream of M 1.atr"  ->  A_DR_000.ATR
+
+Takich nazw mozna normalnie uzywac we
+wszystkich poleceniach (COPY, X, ...).
+Po skasowaniu lub zmianie nazw numeracja
+_III moze sie przesunac.
+
+Nowe pliki dostaja nazwy 8.3. Wielkosc
+liter nie ma znaczenia przy porownywaniu.
+
+
+WSPOLPRACA Z PANELEM SIO2SD
+---------------------------
+Katalog biezacy jest wspolny z panelem
+urzadzenia. Sterownik pilnuje swojej
+sciezki i po zmianie z panelu sam wraca
+na wlasciwy katalog. Nie nawiguj panelem
+w trakcie operacji dyskowych - pojedyncza
+operacja moze sie wtedy nie udac.
+
+
+OGRANICZENIA
+------------
+* pliki do 16 MB,
+* domyslnie 2 pliki otwarte naraz
+  (zmien opcja /M),
+* brak atrybutow (+P/+H/+A), dat i
+  etykiet - API SIO2SD ich nie ma;
+  CHMOD/BOOT/CHVOL zwracaja blad,
+* DIR nie pokazuje dat, a wolne miejsce
+  raportuje jako 65535 sektorow.
+
+
+PAMIEC
+------
+Sterownik jest podzielony na dwa bloki:
+maly rdzen (~0,7 KB) zostaje w pamieci
+podstawowej, a reszta (~6,5 KB) laduje
+sie do pamieci rozszerzonej PROGRAMU
+(banki PORTB/Axlon, SDX 4.47+). Dzieki
+temu w pamieci podstawowej ubywa tylko
+~0,7 KB zamiast ~7 KB.
+
+Gdy w SDX nie ma pamieci rozszerzonej,
+caly sterownik wchodzi do podstawowej
+(dziala, ale bez oszczednosci). Sprawdz
+poleceniem  MEM /X .

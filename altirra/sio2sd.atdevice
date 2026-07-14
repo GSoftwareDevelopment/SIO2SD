@@ -1,0 +1,297 @@
+// ---------------------------------------------------------------------------
+// sio2sd.atdevice - emulacja SIO2SD (fw 3.3) dla Altirry
+//
+// Czesc emulatorowa: obsluguje protokol SIO (ramki komend, ACK/NAK,
+// COMPLETE/ERROR, ramki danych, sumy kontrolne) dla urzadzen $72-$75
+// (API SIO2SD). Cala logika "karty SD" jest w serwerze sio2sd_server.py
+// (Altirra Custom Device Server, TCP localhost:9977).
+//
+// Uruchomienie: najpierw "python sio2sd_server.py <katalog>", potem
+// w Altirze System > Configure System > Peripherals > Devices >
+// Add > Custom > wybrac ten plik.
+//
+// Protokol skrypt <-> serwer:
+//   send_message(1, cpb)  - ramka komendy w rxbuffer[0..4],
+//                           cpb = tempo ramki komendy w cyklach/bit
+//                           zwrot: ack | mode<<8 | len<<10 | final<<20
+//                           ack: $41/$4E/0 (0 = brak urzadzenia, cisza)
+//                           mode: 0=bez danych, 1=odczyt, 2=zapis
+//                           len: dlugosc danych (odczyt: txbuffer[0..len]
+//                                zawiera dane + sume kontrolna)
+//                           final: $43 COMPLETE / $45 ERROR
+//   send_message(2, len)  - dane zapisu w rxbuffer[0..len-1]
+//                           zwrot: bajt koncowy ($43/$45)
+// ---------------------------------------------------------------------------
+
+option "name": "SIO2SD (karta SD) v1.9";
+
+option "network":
+{
+    port: 9977
+};
+
+Segment rxbuffer:
+{
+    size: 600
+};
+
+Segment txbuffer:
+{
+    size: 600
+};
+
+int expect;         // ile bajtow zbieramy do rxbuffer (0 = ignoruj)
+int rxlen;
+int incmd;          // 1 = zbieramy ramke komendy
+int cmdready;       // 1 = pelna ramka komendy w rxbuffer
+int wrpend;         // 1 = czekamy na ramke danych zapisu
+int wrlen;          // dlugosc danych zapisu (bez sumy)
+int wfinal;         // bajt koncowy dla trybu bez danych/odczytu
+int cpb;            // cykle na bit (94 = 19200)
+int txcpb;          // szybkosc COMPLETE/danych biezacej komendy
+                    // (46 = ~38400, tryb XF551 dla napedow D:)
+int txgap;          // przerwa miedzy bajtami danych (cykle)
+int rxcpb;          // tempo (cykle/bit) ostatnio odebranego bajtu
+int cklen;          // wejscie calc_checksum: ile bajtow rxbuffer sumowac
+int ckval;          // wyjscie calc_checksum: suma kontrolna
+int txlen;          // wejscie send_tx_frame: ile bajtow txbuffer wyslac
+
+Thread command_thread;
+Thread rxbyte_thread;
+
+// jezyk skryptowy Altirry nie obsluguje parametrow funkcji ani wartosci
+// zwracanych - komunikacja przez zmienne globalne (cklen/ckval/txlen)
+
+function void calc_checksum()
+{
+    int i = 0;
+    ckval = 0;
+    loop {
+        if (i >= cklen) {
+            return;
+        }
+        ckval = ckval + rxbuffer.read_byte(i);
+        if (ckval > 255) {
+            ckval = (ckval & 255) + 1;
+        }
+        i = i + 1;
+    }
+}
+
+function void send_tx_frame()
+{
+    // wyslij txlen bajtow z txbuffer (dane + suma juz przygotowane).
+    // Tempo bajtow jak w prawdziwych napedach (1050: 984 cykle/bajt,
+    // XF551 HS: ~450). Przerwa musi byc: POKEY gubi bit startu, gdy
+    // bajty ida idealnie stykowo (bajt musi trwac >10 bitow - patrz
+    // uwagi Hiasa o POKEY). Ale nie moze byc za dluga: +120 cykli
+    // na bajt wydluzalo 128-bajtowa ramke o ~13% i sterownik dyskowy
+    // SDX ucinal odbior sektorow (male ramki przechodzily).
+    int i = 0;
+    loop {
+        if (i >= txlen) {
+            return;
+        }
+        Thread.sleep(txgap);
+        $sio.send_raw_byte(txbuffer.read_byte(i), txcpb);
+        i = i + 1;
+    }
+}
+
+function void process_command()
+{
+    int devID = rxbuffer.read_byte(0);
+    int cmd = rxbuffer.read_byte(1);
+    int isdrive = 0;
+    if (devID >= $31 && devID <= $3F) {
+        isdrive = 1;
+    }
+    if (!isdrive && (devID < $72 || devID > $75)) {  // ID 0 -> $72
+        return;             // nie nasze urzadzenie
+    }
+    cklen = 4;
+    calc_checksum();
+    if (ckval != rxbuffer.read_byte(4)) {
+        Debug.log_int("SIO2SD: zla suma ramki komendy, cmd ", cmd);
+        return;             // zla suma -> cisza
+    }
+    int cmdcpb = rxcpb;     // tempo, w jakim przyszla ramka komendy
+    int r = $network.send_message(1, cmdcpb);
+    int ack = r & $FF;
+    int mode = (r >> 8) & 3;
+    int xlen = (r >> 10) & $3FF;
+    int final = (r >> 20) & $FF;
+    int hs = (r >> 28) & 1;
+    if (ack == 0) {
+        return;             // urzadzenie o tym ID nie istnieje -> cisza
+    }
+    // Dobor tempa odpowiedzi:
+    // - ramka komendy w standardzie (19200): ACK/NAK przy 19200;
+    //   gdy bit 7 komendy wlacza HS, pozytywne ACK jest sygnalem
+    //   przestawienia POKEY; COMPLETE i dane ida juz w HS. Tempo HS
+    //   przekazuje serwer w txbuffer[599] (XF551 zwykle 46,
+    //   SIO2SD Turbo hIndex=6 -> 26). txbuffer[598]=1 oznacza API HS.
+    // - ramka komendy w high-speed (Ultra Speed / US Doubler - tak
+    //   tez robi prawdziwy SIO2SD): CALA odpowiedz w tempie ramki
+    //   komendy.
+    int accpb = cpb;    // tempo ACK/NAK
+    txcpb = cpb;
+    txgap = 44;         // 940+44 = 984 cykle/bajt, jak prawdziwa 1050
+    if (hs) {
+        txcpb = txbuffer.read_byte(599);
+        if (txcpb < 14 || txcpb >= 85) {
+            txcpb = 46;
+        }
+        txgap = 10;     // 460+10 = 470 cykli/bajt (XF551: ~450)
+    }
+    if (cmdcpb >= 14 && cmdcpb < 85) {
+        accpb = cmdcpb;     // Ultra: wszystko w tempie komputera
+        txcpb = cmdcpb;
+        txgap = 10;
+    }
+    // linia COMMAND juz opadla (wywolanie z command_thread); krotki
+    // odstep jak w prawdziwym napedzie i ACK/NAK
+    Thread.sleep(300);
+    $sio.send_raw_byte(ack, accpb);
+    if (ack == $4E) {
+        return;             // NAK - koniec transakcji
+    }
+    if (mode == 2) {
+        // zapis: czekaj na ramke danych (dane + suma), obsluga w rxbyte
+        wrlen = xlen;
+        wfinal = final;
+        rxlen = 0;
+        expect = xlen + 1;
+        wrpend = 1;
+        return;
+    }
+    // tryb bez danych lub odczyt: wykonano juz po stronie serwera.
+    // W trybie HS komputer po ACK dopiero przestawia POKEY na 38400
+    // (XF551: status ~1.1 ms, odczyt sektora dziesiatki ms) - COMPLETE
+    // nie moze przyjsc za wczesnie, bo zginie podczas rekonfiguracji
+    if (hs) {
+        Thread.sleep(3600);        // ~2 ms po ACK
+    }
+    else {
+        Thread.sleep(1800);        // ~1 ms po ACK
+    }
+    $sio.send_raw_byte(final, txcpb);
+    if (mode == 1) {
+        // przerwa C -> dane jak w prawdziwych napedach: 1050 robi tu
+        // 0.5-0.63 ms, XF551 ~1.2 ms - komputer musi zdazyc przezbroic
+        // odbiornik po bajcie COMPLETE, zanim przyjda dane
+        if (hs) {
+            Thread.sleep(2100);
+        }
+        else {
+            Thread.sleep(1000);
+        }
+        txlen = xlen + 1;          // dane + suma kontrolna
+        send_tx_frame();
+    }
+}
+
+function void process_write_frame()
+{
+    cklen = wrlen;
+    calc_checksum();
+    wrpend = 0;
+    Thread.sleep(1500);
+    if (ckval != rxbuffer.read_byte(wrlen)) {
+        Debug.log("SIO2SD: zla suma ramki danych");
+        $sio.send_raw_byte($4E, txcpb);  // NAK danych
+        return;
+    }
+    $sio.send_raw_byte($41, txcpb);     // ACK danych (XF551: high-speed)
+    int final = $network.send_message(2, wrlen);
+    Thread.sleep(1800);
+    $sio.send_raw_byte(final & $FF, txcpb);
+}
+
+function void await_frame()
+{
+    // po opadnieciu COMMAND poczekaj, az rxbyte_thread zbierze cala
+    // ramke (powinna juz byc), i dopiero wtedy odpowiadaj - komputer
+    // (zwlaszcza sterownik SDX) inicjuje odbiornik POKEY dopiero po
+    // zwolnieniu linii COMMAND; wczesniejsza odpowiedz ginie
+    int guard = 0;
+    loop {
+        if (cmdready) {
+            cmdready = 0;
+            process_command();
+            return;
+        }
+        if (guard >= 40) {
+            return;         // niekompletna ramka -> cisza
+        }
+        Thread.sleep(100);
+        guard = guard + 1;
+    }
+}
+
+function void command_thread_handler()
+{
+    loop {
+        $sio.wait_command();
+        // nowa ramka komendy uniewaznia wszystko inne
+        rxlen = 0;
+        expect = 5;
+        incmd = 1;
+        cmdready = 0;
+        wrpend = 0;
+        $sio.wait_command_off();
+        await_frame();
+        incmd = 0;
+    }
+}
+
+function void rxbyte_thread_handler()
+{
+    int b;
+    loop {
+        b = $sio.recv_raw_byte();
+        rxcpb = $aux;           // Altirra podaje tempo bajtu w $aux
+        if (expect) {
+            rxbuffer.write_byte(rxlen, b);
+            rxlen = 1 + rxlen;
+            expect = expect - 1;
+            if (expect == 0) {
+                if (incmd) {
+                    cmdready = 1;   // obsluga w command_thread po COMMAND off
+                }
+                else {
+                    if (wrpend) {
+                        process_write_frame();
+                    }
+                }
+            }
+        }
+    }
+}
+
+event "init": function
+{
+    Debug.log("SIO2SD device v1.9");
+};
+
+event "cold_reset": function
+{
+    expect = 0;
+    rxlen = 0;
+    incmd = 0;
+    cmdready = 0;
+    wrpend = 0;
+    cpb = 94;               // 19200 bodow
+    txcpb = 94;
+    txgap = 44;
+    $sio.enable_raw(true);
+    command_thread.run(command_thread_handler);
+    rxbyte_thread.run(rxbyte_thread_handler);
+    $network.post_message($FF, 19);     // param2 = wersja skryptu (1.9)
+    Debug.log("SIO2SD cold reset");
+};
+
+event "warm_reset": function
+{
+    Debug.log("SIO2SD warm reset");
+};

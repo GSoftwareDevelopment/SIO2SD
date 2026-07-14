@@ -1,0 +1,43 @@
+name: Publish static site
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Prepare static site
+        run: |
+          mkdir -p _site/assets _site/altirra _site/dist
+          cp index.html styles.css README.md SDCDEV.SYS SDMOUNT.COM SIO2SD.SYS _site/
+          cp assets/sio2sd_gui_icon.png _site/assets/
+          cp altirra/sio2sd.atdevice altirra/sio2sd_server.py altirra/xexboot.bin _site/altirra/
+          if [ -f dist/SIO2SD-GUI.exe ]; then cp dist/SIO2SD-GUI.exe _site/dist/; fi
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,121 @@
+========================================
+ SDMOUNT.COM - montowanie obrazow z karty
+========================================
+
+CO TO JEST
+----------
+SDMOUNT.COM podpina pliki z karty SIO2SD
+(obrazy .ATR oraz programy .XEX/.COM/.EXE)
+jako napedy D1: - D15:. To ta sama funkcja,
+ktora ma panel SIO2SD - tyle ze z poziomu
+SpartaDOS X.
+
+Po zamontowaniu plik zachowuje sie jak
+zwykla dyskietka: mozna z niej czytac,
+zapisywac, a nawet uruchomic (zbootowac).
+
+
+WYMAGANIA
+---------
+* SpartaDOS X
+* SIO2SD z firmware 3.x
+
+
+SKLADNIA
+--------
+  SDMOUNT
+  SDMOUNT [/0-3] Dn: PLIK
+  SDMOUNT [/0-3] Dn: SCIEZKA>PLIK
+  SDMOUNT [/0-3] Dn: /E
+  SDMOUNT [/0-3] Dn: /D
+
+Gdzie:
+
+  Dn:     numer napedu 1-15 (D1: ... D15:)
+  PLIK    nazwa pliku na karcie
+  /E      podepnij PUSTY dysk
+  /D      odlacz naped
+  /0-3    ID urzadzenia SIO2SD (domyslnie 0)
+
+
+CO ROBIA POSZCZEGOLNE FORMY
+---------------------------
+  SDMOUNT
+      Wypisz liste zamontowanych napedow.
+
+  SDMOUNT D2: GRA.ATR
+      Zamontuj GRA.ATR pod D2:.
+
+  SDMOUNT D2: GRY>RPG>ULTIMA.ATR
+      Zamontuj plik z podkatalogu karty.
+
+  SDMOUNT D2: >GRY>ULTIMA.ATR
+      To samo, ale sciezka liczona od korzenia karty.
+
+  SDMOUNT D2: /E
+      Podepnij pod D2: pusty dysk.
+
+  SDMOUNT D2: /D
+      Odlacz naped D2:.
+
+  SDMOUNT /1 D2: GRA.ATR
+      To samo, ale przez SIO2SD o ID 1.
+
+
+NAZWY PLIKOW
+------------
+Nazwy skladnikow podaje sie tak, jak
+pokazuje je DIR na SDC: - lacznie z
+nazwami skroconymi NNNN_III.EXT.
+
+Mozna podac sama nazwe pliku z biezacego
+katalogu karty albo sciezke. Separatorem
+jest znak ">", "\" albo "/". Sciezka
+zaczeta od ">", "\" albo "/" jest liczona
+od korzenia karty, w przeciwnym razie od
+biezacego katalogu.
+
+Zwykla nazwa pliku idzie ta sama droga co
+w starszym SDMOUNT. Dodatkowe komendy
+katalogowe sa uzywane tylko wtedy, gdy
+podasz sciezke.
+
+
+PRZYKLADY
+---------
+  SDCA:
+  CD GRY
+  SDMOUNT D2: ULTIMA.ATR
+  DIR D2:
+
+  SDMOUNT D2: RPG>ULTIMA.ATR
+  SDMOUNT D2: >GRY>RPG>ULTIMA.ATR
+  SDMOUNT D2: /GRY/RPG/ULTIMA.ATR
+
+  SDMOUNT D3: /E        (pusty dysk pod D3:)
+  SDMOUNT               (co jest podpiete)
+  SDMOUNT D2: /D        (odlacz D2:)
+
+
+BOOTOWANIE Z ZAMONTOWANEGO DYSKU
+--------------------------------
+Aby wystartowac z podpietego obrazu,
+zamontuj go pod numer napedu, ktory jest
+dyskiem rozruchowym, i zresetuj komputer.
+Obslugiwane sa .ATR (odczyt i zapis) oraz
+.XEX/.COM/.EXE (dysk rozruchowy z wlasnym
+bootloaderem).
+
+
+UWAGI
+-----
+* Montuj obrazy pod numer INNY niz ten, z
+  ktorego aktualnie pracujesz (np. jesli
+  SDX chodzi z D1:, montuj pod D2: lub
+  wyzej), zeby dwa urzadzenia nie mowily
+  naraz na szynie SIO.
+* Montowany plik musi byc poprawnym
+  obrazem dyskietki (.ATR) - plik o
+  nietypowym rozmiarze SIO2SD odrzuci.
+* Zmiana dziala natychmiast, tak jak na
+  panelu urzadzenia.

@@ -1,0 +1,27 @@
+# Local Codex/agent state
+.agents/
+.codex/
+
+# Python/runtime cache
+__pycache__/
+*.py[cod]
+
+# Build work directories
+build/
+
+# Local settings
+sio2sd_gui_settings.json
+dist/sio2sd_gui_settings.json
+
+# Sample/generated SD card contents
+sd/
+dist/sd/
+
+# Keep the distributable GUI executable, ignore other dist mirrors.
+dist/*
+!dist/SIO2SD-GUI.exe
+
+# Local archives and accidental staging folders
+*.7z
+docs/
+
